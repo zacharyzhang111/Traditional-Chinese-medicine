@@ -1,0 +1,98 @@
+
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7789.h>
+#include <SdFat.h>
+#include <Adafruit_SPIFlash.h>
+#include <Adafruit_ImageReader.h>
+
+#define SD_CS    7   // SD卡片选
+#define TFT_CS  10   // TFT片选
+#define TFT_DC   9   // TFT数据/命令选择
+#define TFT_RST  8   // TFT复位
+#define BUTTON_PIN 3 // 按钮信号引脚（与您的测试程序一致）
+
+// ========== 使用SD卡 ==========
+#define USE_SD_CARD
+#if defined(USE_SD_CARD)
+SdFat                SD;
+Adafruit_ImageReader reader(SD);
+#else
+// ... SPI闪存部分省略（与原程序相同）...
+#endif
+
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+
+// 图片索引（0:1.bmp, 1:2.bmp, 2:3.bmp）
+int currentIndex = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(BUTTON_PIN, INPUT);      // 按钮引脚设为输入（模块已自带外部上拉）
+
+  // 初始化屏幕
+  tft.init(240, 320);
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setRotation(2);              // 设置方向，可根据需要调整
+
+  // 初始化SD卡
+  if (!SD.begin(SD_CS, SD_SCK_MHZ(10))) {
+    Serial.println("SD card init failed!");
+    while (1);                     // 停止运行
+  }
+  Serial.println("SD card ready.");
+
+  // 显示第一张图片
+  showCurrentImage();
+  Serial.println("Press button to switch image.");
+}
+
+void loop() {
+  // 读取按钮状态（与您的测试程序完全相同）
+  int buttonState = digitalRead(BUTTON_PIN);
+
+  // 检测按钮是否被按下（低电平有效）
+  if (buttonState == LOW) {
+    delay(20);                     // 简单防抖，与测试程序类似
+    // 再次确认按下（避免抖动误判）
+    if (digitalRead(BUTTON_PIN) == LOW) {
+      Serial.println("Button pressed!");   // 按下提示
+
+      // 切换到下一张图片
+      currentIndex++;
+      if (currentIndex > 2) {
+        currentIndex = 0;
+      }
+      showCurrentImage();
+
+      // 等待按钮释放，避免长按时连续切换
+      while (digitalRead(BUTTON_PIN) == LOW);
+      delay(20);                   // 释放防抖
+    }
+  }
+  // 注：此处未加 delay，因为等待按钮释放时已经消耗了时间，循环速度足够快
+}
+
+// 根据当前索引显示图片
+void showCurrentImage() {
+  ImageReturnCode stat;
+  tft.fillScreen(ST77XX_BLACK);    // 清屏（可选）
+
+  if (currentIndex == 0) {
+    Serial.println("Showing 1.bmp");
+    stat = reader.drawBMP("/1.bmp", tft, 0, 0);
+  } else if (currentIndex == 1) {
+    Serial.println("Showing 2.bmp");
+    stat = reader.drawBMP("/2.bmp", tft, 0, 0);
+  } else if (currentIndex == 2) {
+    Serial.println("Showing 3.bmp");
+    stat = reader.drawBMP("/3.bmp", tft, 0, 0);
+  }
+
+  // 检查图片加载是否成功
+  if (stat != IMAGE_SUCCESS) {
+    Serial.print("Error loading image, code: ");
+    Serial.println(stat);
+  } else {
+    Serial.println("Display OK");
+  }
+}
