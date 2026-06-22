@@ -1,81 +1,80 @@
-
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
 #include <SdFat.h>
 #include <Adafruit_SPIFlash.h>
 #include <Adafruit_ImageReader.h>
 
-#define SD_CS    7   // SD卡片选
-#define TFT_CS  10   // TFT片选
-#define TFT_DC   9   // TFT数据/命令选择
-#define TFT_RST  8   // TFT复位
-#define BUTTON_PIN 3 // 按钮信号引脚（与您的测试程序一致）
+#define SD_CS    7   // SD card chip select
+#define TFT_CS  10   // TFT chip select
+#define TFT_DC   9   // TFT data/command select
+#define TFT_RST  8   // TFT reset
+#define BUTTON_PIN 3 // Button signal pin (consistent with your test program)
 
-// ========== 使用SD卡 ==========
+// ========== SD Card Mode ==========
 #define USE_SD_CARD
 #if defined(USE_SD_CARD)
 SdFat                SD;
 Adafruit_ImageReader reader(SD);
 #else
-// ... SPI闪存部分省略（与原程序相同）...
+// ... SPI flash section omitted (same as original program) ...
 #endif
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
-// 图片索引（0:1.bmp, 1:2.bmp, 2:3.bmp）
+// Image index (0: 1.bmp, 1: 2.bmp, 2: 3.bmp)
 int currentIndex = 0;
 
 void setup() {
   Serial.begin(9600);
-  pinMode(BUTTON_PIN, INPUT);      // 按钮引脚设为输入（模块已自带外部上拉）
+  pinMode(BUTTON_PIN, INPUT);      // Set button pin as input (module has built-in external pull-up)
 
-  // 初始化屏幕
+  // Initialize TFT display
   tft.init(240, 320);
   tft.fillScreen(ST77XX_BLACK);
-  tft.setRotation(2);              // 设置方向，可根据需要调整
+  tft.setRotation(2);              // Set display rotation, adjust as needed
 
-  // 初始化SD卡
+  // Initialize SD card
   if (!SD.begin(SD_CS, SD_SCK_MHZ(10))) {
     Serial.println("SD card init failed!");
-    while (1);                     // 停止运行
+    while (1);                     // Halt program execution
   }
   Serial.println("SD card ready.");
 
-  // 显示第一张图片
+  // Display the first image
   showCurrentImage();
   Serial.println("Press button to switch image.");
 }
 
 void loop() {
-  // 读取按钮状态（与您的测试程序完全相同）
+  // Read button state (identical to your test program)
   int buttonState = digitalRead(BUTTON_PIN);
 
-  // 检测按钮是否被按下（低电平有效）
+  // Detect button press (active low)
   if (buttonState == LOW) {
-    delay(20);                     // 简单防抖，与测试程序类似
-    // 再次确认按下（避免抖动误判）
+    delay(20);                     // Simple debounce, similar to test program
+    // Confirm press again to avoid jitter misjudgment
     if (digitalRead(BUTTON_PIN) == LOW) {
-      Serial.println("Button pressed!");   // 按下提示
+      Serial.println("Button pressed!");   // Button press notification
 
-      // 切换到下一张图片
+      // Switch to next image
       currentIndex++;
       if (currentIndex > 2) {
         currentIndex = 0;
       }
       showCurrentImage();
 
-      // 等待按钮释放，避免长按时连续切换
+      // Wait for button release to prevent continuous switching during long press
       while (digitalRead(BUTTON_PIN) == LOW);
-      delay(20);                   // 释放防抖
+      delay(20);                   // Release debounce
     }
   }
-  // 注：此处未加 delay，因为等待按钮释放时已经消耗了时间，循环速度足够快
+  // Note: No extra delay here; waiting for button release already consumes time, loop runs fast enough
 }
 
-// 根据当前索引显示图片
+// Display image corresponding to the current index
 void showCurrentImage() {
   ImageReturnCode stat;
-  tft.fillScreen(ST77XX_BLACK);    // 清屏（可选）
+  tft.fillScreen(ST77XX_BLACK);    // Clear screen (optional)
 
   if (currentIndex == 0) {
     Serial.println("Showing 1.bmp");
@@ -88,7 +87,7 @@ void showCurrentImage() {
     stat = reader.drawBMP("/3.bmp", tft, 0, 0);
   }
 
-  // 检查图片加载是否成功
+  // Check if image loaded successfully
   if (stat != IMAGE_SUCCESS) {
     Serial.print("Error loading image, code: ");
     Serial.println(stat);
