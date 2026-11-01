@@ -10,13 +10,13 @@
 #define TFT_RST  8   // TFT reset
 #define BUTTON_PIN 3 // Button signal pin (consistent with your test program)
 
-// ========== SD Card Mode ==========
+//SD Card Mode
 #define USE_SD_CARD
 #if defined(USE_SD_CARD)
 SdFat                SD;
 Adafruit_ImageReader reader(SD);
 #else
-// ... SPI flash section omitted (same as original program) ...
+//SPI flash section omitted (same as original program)
 #endif
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
@@ -26,12 +26,12 @@ int currentIndex = 0;
 
 void setup() {
   Serial.begin(9600);
-  pinMode(BUTTON_PIN, INPUT);      // Set button pin as input (module has built-in external pull-up)
+  pinMode(BUTTON_PIN, INPUT);      // Set button pin as input
 
   // Initialize TFT display
   tft.init(240, 320);
   tft.fillScreen(ST77XX_BLACK);
-  tft.setRotation(2);              // Set display rotation, adjust as needed
+  tft.setRotation(2);              // Set display rotation
 
   // Initialize SD card
   if (!SD.begin(SD_CS, SD_SCK_MHZ(10))) {
@@ -68,7 +68,7 @@ void loop() {
       delay(20);                   // Release debounce
     }
   }
-  // Note: No extra delay here; waiting for button release already consumes time, loop runs fast enough
+  //  waiting for button release already consumes time, loop runs fast enough
 }
 
 // Display image corresponding to the current index
