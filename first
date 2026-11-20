@@ -4,94 +4,113 @@
 #include <Adafruit_SPIFlash.h>
 #include <Adafruit_ImageReader.h>
 
-#define SD_CS    7   // SD card chip select
-#define TFT_CS  10   // TFT chip select
-#define TFT_DC   9   // TFT data/command select
-#define TFT_RST  8   // TFT reset
-#define BUTTON_PIN 3 // Button signal pin (consistent with your test program)
+// Settings
+const uint8_t sdCs = 7;
+const uint8_t tftCs = 10;
+const uint8_t tftDc = 9;
+const uint8_t tftRst = 8;
+const uint8_t buttonPin = 3;
 
-//SD Card Mode
-#define USE_SD_CARD
-#if defined(USE_SD_CARD)
-SdFat                SD;
-Adafruit_ImageReader reader(SD);
+// SD Mode
+#define sdMode
+
+#if defined(sdMode)
+SdFat sdCard;
+Adafruit_ImageReader imageReader(sdCard);
 #else
-//SPI flash section omitted (same as original program)
+// Flash Mode
 #endif
 
-Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+// Display Object
+Adafruit_ST7789 tftDisplay = Adafruit_ST7789(tftCs, tftDc, tftRst);
 
-// Image index (0: 1.bmp, 1: 2.bmp, 2: 3.bmp)
+// Image Index
 int currentIndex = 0;
 
-void setup() {
-  Serial.begin(9600);
-  pinMode(BUTTON_PIN, INPUT);      // Set button pin as input
+// Image Output
+void showImage() {
+  ImageReturnCode imageStatus;
 
-  // Initialize TFT display
-  tft.init(240, 320);
-  tft.fillScreen(ST77XX_BLACK);
-  tft.setRotation(2);              // Set display rotation
-
-  // Initialize SD card
-  if (!SD.begin(SD_CS, SD_SCK_MHZ(10))) {
-    Serial.println("SD card init failed!");
-    while (1);                     // Halt program execution
-  }
-  Serial.println("SD card ready.");
-
-  // Display the first image
-  showCurrentImage();
-  Serial.println("Press button to switch image.");
-}
-
-void loop() {
-  // Read button state (identical to your test program)
-  int buttonState = digitalRead(BUTTON_PIN);
-
-  // Detect button press (active low)
-  if (buttonState == LOW) {
-    delay(20);                     // Simple debounce, similar to test program
-    // Confirm press again to avoid jitter misjudgment
-    if (digitalRead(BUTTON_PIN) == LOW) {
-      Serial.println("Button pressed!");   // Button press notification
-
-      // Switch to next image
-      currentIndex++;
-      if (currentIndex > 2) {
-        currentIndex = 0;
-      }
-      showCurrentImage();
-
-      // Wait for button release to prevent continuous switching during long press
-      while (digitalRead(BUTTON_PIN) == LOW);
-      delay(20);                   // Release debounce
-    }
-  }
-  //  waiting for button release already consumes time, loop runs fast enough
-}
-
-// Display image corresponding to the current index
-void showCurrentImage() {
-  ImageReturnCode stat;
-  tft.fillScreen(ST77XX_BLACK);    // Clear screen (optional)
+  tftDisplay.fillScreen(ST77XX_BLACK);
 
   if (currentIndex == 0) {
     Serial.println("Showing 1.bmp");
-    stat = reader.drawBMP("/1.bmp", tft, 0, 0);
-  } else if (currentIndex == 1) {
+    imageStatus = imageReader.drawBMP("/1.bmp", tftDisplay, 0, 0);
+  }
+  else if (currentIndex == 1) {
     Serial.println("Showing 2.bmp");
-    stat = reader.drawBMP("/2.bmp", tft, 0, 0);
-  } else if (currentIndex == 2) {
+    imageStatus = imageReader.drawBMP("/2.bmp", tftDisplay, 0, 0);
+  }
+  else if (currentIndex == 2) {
     Serial.println("Showing 3.bmp");
-    stat = reader.drawBMP("/3.bmp", tft, 0, 0);
+    imageStatus = imageReader.drawBMP("/3.bmp", tftDisplay, 0, 0);
   }
 
-  // Check if image loaded successfully
-  if (stat != IMAGE_SUCCESS) {
+  // Load Check
+  if (imageStatus != IMAGE_SUCCESS) {
     Serial.print("Error loading image, code: ");
-    Serial.println(stat);
-  } else {
+    Serial.println(imageStatus);
+  }
+  else {
     Serial.println("Display OK");
+  }
+}
+
+// Initialization
+void setup() {
+
+  // Serial Setup
+  Serial.begin(9600);
+  pinMode(buttonPin, INPUT);
+
+  // TFT Setup
+  tftDisplay.init(240, 320);
+  tftDisplay.fillScreen(ST77XX_BLACK);
+  tftDisplay.setRotation(2);
+
+  // SD Setup
+  if (!sdCard.begin(sdCs, SD_SCK_MHZ(10))) {
+    Serial.println("SD card init failed!");
+    while (1);
+  }
+
+  Serial.println("SD card ready.");
+
+  // First Image
+  showImage();
+
+  Serial.println("Press button to switch image.");
+}
+
+// Main Loop
+void loop() {
+
+  // Button Scan
+  int buttonState = digitalRead(buttonPin);
+
+  // Button Press
+  if (buttonState == LOW) {
+
+    // Debounce
+    delay(20);
+
+    if (digitalRead(buttonPin) == LOW) {
+
+      Serial.println("Button pressed!");
+
+      // Image Switch
+      currentIndex++;
+
+      if (currentIndex > 2) {
+        currentIndex = 0;
+      }
+
+      showImage();
+
+      // Release Wait
+      while (digitalRead(buttonPin) == LOW);
+
+      delay(20);
+    }
   }
 }
